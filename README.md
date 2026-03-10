@@ -126,6 +126,14 @@ Monatlicher API-Verbrauch pro Endpunkt.
 | POST | `/api/recalculate` | Alle Scores neu berechnen |
 | GET | `/api/export/csv` | CSV-Export aller Businesses |
 
+## Screenshots
+
+<p>
+  <img src="docs/import.png" width="280" alt="Import-Seite" />
+  <img src="docs/main.png" width="280" alt="Hauptansicht mit Filtern" />
+  <img src="docs/detail.png" width="280" alt="Detail-Modal" />
+</p>
+
 ## GUI Features
 
 - **Textsuche**: Durchsucht DB nach Name, Adresse, Typ, Suchquery (kein API-Verbrauch)
