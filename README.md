@@ -1,147 +1,149 @@
 # BusinessFinder
 
-Tool zum Finden von Businesses mit Optimierungspotenzial (keine Website, fehlende Daten, schlechte Bewertungen) via Google Places API (New). Gedacht als Lead-Quelle fuer Webentwicklung / Online-Marketing.
+[English](README.md) | [Deutsch](README.de.md)
+
+Tool for finding businesses with optimization potential (no website, missing data, poor reviews) via Google Places API (New). Intended as a lead source for web development / online marketing.
 
 > [!CAUTION]
-> Dieses Tool nutzt die Google Places API, die nach dem Gratis-Kontingent kostenpflichtig wird. Text Search kostet $0.032/Aufruf, Place Details $0.025/Aufruf. Bei intensiver Nutzung koennen schnell zweistellige Betraege anfallen. Immer den API-Verbrauch im Blick behalten und ggf. Budget-Limits in der Google Cloud Console setzen.
+> This tool uses the Google Places API, which becomes paid after the free tier. Text Search costs $0.032/call, Place Details $0.025/call. With intensive use, double-digit amounts can quickly accumulate. Always keep an eye on API consumption and, if necessary, set budget limits in the Google Cloud Console.
 
 ## Setup
 
 ```bash
-# Dependencies installieren
+# Install dependencies
 npm install
 cd frontend && npm install && cd ..
 
-# API Key konfigurieren
+# Configure API Key
 cp .env.example .env
-# GOOGLE_PLACES_API_KEY=dein_key eintragen
+# Enter GOOGLE_PLACES_API_KEY=your_key
 
-# Frontend bauen + Server starten
+# Build frontend + start server
 cd frontend && npm run build && cd ..
 npm run server
 # -> http://localhost:3001
 ```
 
-Fuer Entwicklung: `cd frontend && npm run dev` (Vite auf Port 5173, Proxy auf 3001).
+For development: `cd frontend && npm run dev` (Vite on port 5173, proxy on 3001).
 
-## Architektur
+## Architecture
 
 ```
 src/
   server.ts          Express API Server (Port 3001)
-  scanner.ts         Scan-Logik: Text Search + Detail Fetch
-  analyzer.ts        Problem-Score Berechnung (konfigurierbar)
-  config.ts          Umgebungsvariablen + Pfade
+  scanner.ts         Scan logic: Text Search + Detail Fetch
+  analyzer.ts        Problem-Score calculation (configurable)
+  config.ts          Environment variables + paths
   api/places.ts      Google Places API (New) Client
-  db/schema.ts       SQLite Schema + Migrationen
-  db/repository.ts   Datenbank-Zugriff (CRUD, Stats, Usage)
+  db/schema.ts       SQLite Schema + Migrations
+  db/repository.ts   Database access (CRUD, Stats, Usage)
 
 frontend/src/
-  App.tsx             Hauptkomponente, State-Management, Routing
-  api.ts              API Client (fetch-Wrapper)
+  App.tsx             Main component, State Management, Routing
+  api.ts              API Client (fetch wrapper)
   components/
-    SearchBar.tsx      Textsuche (DB) + Navigation zur Import-Seite
-    ImportPage.tsx     Eigene Seite fuer Scan + Details laden
-    StatsPanel.tsx     Statistik-Karten + Scoring-Config
-    UsagePanel.tsx     API-Verbrauch Anzeige
-    FilterBar.tsx      Kombinierbare Filter-Dropdowns
-    BusinessTable.tsx  Sortierbare Tabelle mit Detail-Modal
-    BusinessDetail.tsx Detail-Ansicht (Modal) mit allen Feldern
-    ScoringConfig.tsx  Konfigurierbare Scoring-Regeln
-    ProblemsTag.tsx    Farbige Problem-Badges
+    SearchBar.tsx      Text search (DB) + navigation to import page
+    ImportPage.tsx     Dedicated page for Scan + loading Details
+    StatsPanel.tsx     Statistics cards + Scoring Config
+    UsagePanel.tsx     API consumption display
+    FilterBar.tsx      Combinable filter dropdowns
+    BusinessTable.tsx  Sortable table with detail modal
+    BusinessDetail.tsx Detail view (modal) with all fields
+    ScoringConfig.tsx  Configurable scoring rules
+    ProblemsTag.tsx    Colored problem badges
 ```
 
 ## Google Places API
 
-Nutzt die **Google Places API (New)** (POST-basiert, Field Masks bestimmen Pricing-Tier).
+Uses the **Google Places API (New)** (POST-based, Field Masks determine pricing tier).
 
-### Zwei-Schritt Scan
+### Two-Step Scan
 
-1. **Text Search** (Pro-Tier, 5.000 gratis/Monat)
-   - Sucht nach Query (z.B. "Friseur in Hamburg Langenhorn")
-   - Paginiert bis zu 3 Seiten (max. 60 Ergebnisse pro Query)
-   - Speichert Basis-Daten + Foto-Referenzen
+1. **Text Search** (Pro tier, 5,000 free/month)
+   - Searches for query (e.g. "Hairdresser in Hamburg Langenhorn")
+   - Paginates up to 3 pages (max. 60 results per query)
+   - Stores basic data + photo references
 
-2. **Place Details** (Enterprise + Atmosphere, 1.000 gratis/Monat)
-   - Laedt Details fuer gescannte Businesses
-   - Website, Telefon, Bewertungen, Oeffnungszeiten, Reviews
-   - Atmosphere-Flags (delivery, dineIn, reservable, etc.)
-   - Payment/Parking/Accessibility Options
+2. **Place Details** (Enterprise + Atmosphere, 1,000 free/month)
+   - Loads details for scanned businesses
+   - Website, phone, reviews, opening hours, reviews
+   - Atmosphere flags (delivery, dineIn, reservable, etc.)
+   - Payment/Parking/Accessibility options
 
-### API-Verbrauch
+### API Usage
 
-Wird in `api_usage` Tabelle getrackt und im Frontend angezeigt. Limits:
+Tracked in `api_usage` table and displayed in the frontend. Limits:
 
-| Endpunkt | Gratis/Monat |
+| Endpoint | Free/Month |
 |----------|-------------|
-| Text Search (Pro) | 5.000 |
-| Place Details (Enterprise) | 1.000 |
+| Text Search (Pro) | 5,000 |
+| Place Details (Enterprise) | 1,000 |
 
-**Foto-Referenzen** werden kostenlos aus der Text Search gespeichert (Enterprise Photo API zum Abruf: 1.000 gratis/Monat, noch nicht implementiert).
+**Photo references** are stored for free from the Text Search (Enterprise Photo API for retrieval: 1,000 free/month, not yet implemented).
 
-## Datenbank
+## Database
 
-SQLite mit WAL-Mode (`data/businessfinder.db`). Tabellen:
+SQLite with WAL mode (`data/businessfinder.db`). Tables:
 
 ### businesses
-Alle Business-Daten. Wichtige Felder:
+All business data. Important fields:
 - `id` (PK) - Google Place ID
-- `details_fetched` - 0=nur Text Search, 1=Details geladen
-- `problem_score` - berechneter Score (hoeher = mehr Probleme)
-- `problems` - JSON Array der erkannten Probleme
-- `atmosphere` - JSON mit Service-Flags (delivery, reservable, etc.)
-- `reviews_json` - JSON Array der Google Reviews
-- `photo_refs` - JSON Array der Foto-Referenzen
+- `details_fetched` - 0=text search only, 1=details loaded
+- `problem_score` - calculated score (higher = more problems)
+- `problems` - JSON array of detected problems
+- `atmosphere` - JSON with service flags (delivery, reservable, etc.)
+- `reviews_json` - JSON array of Google Reviews
+- `photo_refs` - JSON array of photo references
 
 ### scoring_config
-Konfigurierbare Scoring-Regeln:
+Configurable scoring rules:
 
-| Code | Default-Punkte | Beschreibung |
+| Code | Default Points | Description |
 |------|---------------|-------------|
-| NO_WEBSITE | 30 | Keine Website |
-| NO_REVIEWS | 20 | Keine Bewertungen |
-| NO_PHONE | 15 | Keine Telefonnummer |
-| NO_HOURS | 15 | Keine Oeffnungszeiten |
-| FEW_REVIEWS | 10 | Weniger als 10 Bewertungen |
-| FEW_PHOTOS | 10 | Weniger als 3 Fotos |
-| LOW_RATING | 10 | Bewertung unter 3.5 |
+| NO_WEBSITE | 30 | No website |
+| NO_REVIEWS | 20 | No reviews |
+| NO_PHONE | 15 | No phone number |
+| NO_HOURS | 15 | No opening hours |
+| FEW_REVIEWS | 10 | Less than 10 reviews |
+| FEW_PHOTOS | 10 | Less than 3 photos |
+| LOW_RATING | 10 | Rating below 3.5 |
 
-Punkte und aktiv/inaktiv sind ueber die GUI konfigurierbar. Nach Aenderung werden alle Businesses neu berechnet.
+Points and active/inactive status are configurable via the GUI. After modification, all businesses are recalculated.
 
 ### api_usage
-Monatlicher API-Verbrauch pro Endpunkt.
+Monthly API consumption per endpoint.
 
-## API Endpunkte
+## API Endpoints
 
-| Methode | Pfad | Beschreibung |
+| Method | Path | Description |
 |---------|------|-------------|
-| POST | `/api/scan` | Neuen Scan starten (kostet API-Calls) |
-| POST | `/api/fetch-details` | Details fuer ungescannte Businesses laden |
-| GET | `/api/businesses?q=` | Businesses aus DB laden (optionaler Suchtext) |
-| GET | `/api/businesses/top?limit=` | Top Businesses nach Score |
-| GET | `/api/stats` | Statistiken (Anzahl, Durchschnitt, etc.) |
-| GET | `/api/usage` | API-Verbrauch aktueller Monat |
-| GET | `/api/scoring-config` | Aktuelle Scoring-Regeln |
-| PUT | `/api/scoring-config` | Scoring-Regeln speichern |
-| POST | `/api/recalculate` | Alle Scores neu berechnen |
-| GET | `/api/export/csv` | CSV-Export aller Businesses |
+| POST | `/api/scan` | Start new scan (costs API calls) |
+| POST | `/api/fetch-details` | Load details for unscanned businesses |
+| GET | `/api/businesses?q=` | Load businesses from DB (optional search text) |
+| GET | `/api/businesses/top?limit=` | Top businesses by score |
+| GET | `/api/stats` | Statistics (count, average, etc.) |
+| GET | `/api/usage` | API usage current month |
+| GET | `/api/scoring-config` | Current scoring rules |
+| PUT | `/api/scoring-config` | Save scoring rules |
+| POST | `/api/recalculate` | Recalculate all scores |
+| GET | `/api/export/csv` | CSV export of all businesses |
 
 ## Screenshots
 
 <p>
-  <img src="docs/import.png" width="280" alt="Import-Seite" />
-  <img src="docs/main.png" width="280" alt="Hauptansicht mit Filtern" />
-  <img src="docs/detail.png" width="280" alt="Detail-Modal" />
+  <img src="docs/import.png" width="280" alt="Import page" />
+  <img src="docs/main.png" width="280" alt="Main view with filters" />
+  <img src="docs/detail.png" width="280" alt="Detail modal" />
 </p>
 
 ## GUI Features
 
-- **Textsuche**: Durchsucht DB nach Name, Adresse, Typ, Suchquery (kein API-Verbrauch)
-- **Import-Seite**: Eigene Seite mit Zwei-Schritt-Workflow (Scan + Details laden), Limit-Slider, Beispielen
-- **Status-Anzeige**: Auffaellige Ergebnis-Box mit Link zur Uebersicht nach Scan/Details
-- **Filter**: Kombinierbare Dropdowns (Website, Bewertung, Reviews, Score)
-- **Sortierung**: Klick auf Spaltenkoepfe (Score, Name, Rating, Reviews, Typ)
-- **Detail-Modal**: Klick auf Tabellenzeile zeigt alle Details
-- **Scoring-Config**: Aufklappbares Panel zum Anpassen der Scoring-Regeln
-- **CSV-Export**: Download aller Businesses als CSV
-- **API-Verbrauch**: Live-Anzeige mit Fortschrittsbalken
+- **Text Search**: Search DB by name, address, type, search query (no API usage)
+- **Import Page**: Dedicated page with two-step workflow (Scan + load details), limit slider, examples
+- **Status Display**: Noticeable result box with link to overview after scan/details
+- **Filters**: Combinable dropdowns (website, rating, reviews, score)
+- **Sorting**: Click on column headers (score, name, rating, reviews, type)
+- **Detail Modal**: Click on table row shows all details
+- **Scoring Config**: Expandable panel for adjusting scoring rules
+- **CSV Export**: Download all businesses as CSV
+- **API Usage**: Live display with progress bars
