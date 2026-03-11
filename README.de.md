@@ -1,6 +1,7 @@
 # BusinessFinder
 
-[English](README.md) | [Deutsch](README.de.md)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
+[![de](https://img.shields.io/badge/lang-de-blue.svg)](README.de.md)
 
 Tool zum Finden von Businesses mit Optimierungspotenzial (keine Website, fehlende Daten, schlechte Bewertungen) via Google Places API (New). Gedacht als Lead-Quelle fuer Webentwicklung / Online-Marketing.
 
