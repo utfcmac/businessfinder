@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "server": "tsx src/server.ts"
+    "server": "tsx src/server.ts",
+    "setup:hooks": "bash scripts/setup-hooks.sh",
+    "postinstall": "npm run setup:hooks"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

@@ -1,0 +1,46 @@
+#!/bin/bash
+# Pre-commit hook to check for unstaged files
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}🔍 Running pre-commit checks...${NC}"
+
+# Check for unstaged changes
+UNSTAGED=$(git diff --name-only)
+if [ -n "$UNSTAGED" ]; then
+    echo -e "${YELLOW}⚠️  Warning: You have unstaged changes:${NC}"
+    echo "$UNSTAGED"
+    echo ""
+    echo -e "${YELLOW}These files will NOT be included in the commit!${NC}"
+    echo ""
+    read -p "Do you want to add all changes (git add -A) and continue? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        git add -A
+        echo -e "${GREEN}✅ All changes staged${NC}"
+    else
+        echo -e "${RED}❌ Commit cancelled. Please stage your changes manually.${NC}"
+        exit 1
+    fi
+fi
+
+# Check for untracked files
+UNTRACKED=$(git ls-files --others --exclude-standard)
+if [ -n "$UNTRACKED" ]; then
+    echo -e "${YELLOW}⚠️  Warning: You have untracked files:${NC}"
+    echo "$UNTRACKED"
+    echo ""
+    read -p "Do you want to add these files too? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        git add -A
+        echo -e "${GREEN}✅ All files staged${NC}"
+    fi
+fi
+
+echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
+exit 0
